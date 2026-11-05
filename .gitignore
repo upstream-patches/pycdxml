@@ -6,3 +6,6 @@
 
 /Creation of combined repository.txt
 /.idea
+
+# Added in this fork on 2026-11-05
+__pycache__/

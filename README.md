@@ -164,6 +164,14 @@ Please absolutely do. Just reporting issues will already help and in that case p
 
 An important help would also be adding more and better tests. Ultimately the different modules generate new files which must somehow be validated. Currently, I'm just comparing to a reference file which itself was created by these modules but visually inspected to be correct. Issue is small changes can lead to test failures and the need to regenerate and inspect the reference files. The hence testing is not very automatic at all. 
 
+## Changes in this fork
+
+This fork changed the following on 2026-11-05. The changes are released under the GPLv3, as is the rest of the project.
+
+- `mol_to_document` has four new options: `kekulize_molecule`, `add_chiral_hs`, `add_wedge_bonds` and `add_hydrogens`. `add_chiral_hs` defaults to `False`, so by default no chiral hydrogens are added. With `add_hydrogens=False`, the molecule is not prepared with `PrepareMolForDrawing`, and atom labels show no hydrogen counts.
+- New command-line tool `pycdxml-smiles-to-cdxml` (also `python -m pycdxml.smiles_to_cdxml`). It reads a JSON list of SMILES from stdin and writes a JSON list of cdxml strings to stdout. The entry for each item that failed is `null`.
+- `rdkit` is now in `install_requires`, and the version is `0.1.6b0+upstreampatches.1`.
+
 ## Miscellaneous
 
 ### License

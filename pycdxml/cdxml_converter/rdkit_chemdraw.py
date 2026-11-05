@@ -1,3 +1,5 @@
+# Changed in this fork on 2026-11-05: added the kekulize_molecule, add_chiral_hs, add_wedge_bonds and
+# add_hydrogens options to mol_to_document. add_chiral_hs now defaults to False.
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
@@ -10,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import math
 import logging
+from typing import Optional
 
 logger = logging.getLogger('pycdxml.rdkit_chemdraw')
 
@@ -22,8 +25,9 @@ DEFAULT_ATOM_LABEL_FONT_COLOR = 0
 DEFAULT_AVG_BOND_LENGTH = 0.825
 
 
-def mol_to_document(mol: Chem.Mol, chemdraw_style: dict = None, conformer_id: int = -1, margin=1,
-                    include_enhanced_stereo=True, crossed_bonds=True):
+def mol_to_document(mol: Chem.Mol, chemdraw_style: Optional[dict] = None, conformer_id: int = -1, margin=1,
+                    include_enhanced_stereo=True, crossed_bonds=True, kekulize_molecule=True,
+                    add_chiral_hs=False, add_wedge_bonds=True, add_hydrogens=True):
     """
     Converts a rdkit molecule into an internal document representation.
 
@@ -35,6 +39,15 @@ def mol_to_document(mol: Chem.Mol, chemdraw_style: dict = None, conformer_id: in
     :param margin: margin in cm from the edges of the document. Defines placement of molecule inside document
     :param include_enhanced_stereo: if enhanced stereo should be included in the cdxml
     :param crossed_bonds: if double bonds with undefined stereo should be drawn as crossed bonds (wavy bond)
+    :param kekulize_molecule: if the molecule should be kekulized before drawing
+    :param add_chiral_hs: if explicit hydrogens should be added at chiral centres before drawing. Has no effect if
+                          add_hydrogens is False
+    :param add_wedge_bonds: if wedge and hash bonds should be set for stereo centres before drawing. Has no effect if
+                            add_hydrogens is False
+    :param add_hydrogens: if the molecule should be prepared for drawing with rdMolDraw2D.PrepareMolForDrawing and
+                          atom labels should show hydrogen counts. If False, no chiral hydrogens and no wedge bonds
+                          are added, whatever add_chiral_hs and add_wedge_bonds say. The molecule is only kekulized
+                          (if kekulize_molecule is True) and gets 2D coordinates if it has no conformer
     :return:
     """
 
@@ -62,8 +75,17 @@ def mol_to_document(mol: Chem.Mol, chemdraw_style: dict = None, conformer_id: in
     page.attrib['id'] = str(next(object_id_sequence))
     page.attrib.update(_get_default_page_properties())
 
-    # For proper detection and setting of Wedge Bonds
-    mol = Chem.Draw.rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=True, addChiralHs=True, wedgeBonds=True)
+    if add_hydrogens:
+        # For proper detection and setting of Wedge Bonds
+        mol = Chem.Draw.rdMolDraw2D.PrepareMolForDrawing(mol, kekulize=kekulize_molecule, addChiralHs=add_chiral_hs,
+                                                         wedgeBonds=add_wedge_bonds)
+    else:
+        # Work on a copy so that the caller's molecule is not changed
+        mol = Chem.Mol(mol)
+        if kekulize_molecule:
+            Chem.Kekulize(mol)
+        if mol.GetNumConformers() == 0:
+            AllChem.Compute2DCoords(mol)
 
     conformer = mol.GetConformer(conformer_id)
 
@@ -177,7 +199,7 @@ def mol_to_document(mol: Chem.Mol, chemdraw_style: dict = None, conformer_id: in
             # Deuterium
             if lbl == "H" and atom.GetIsotope() == 2:
                 lbl = "D"
-            if total_hs > 0:
+            if add_hydrogens and total_hs > 0:
                 lbl += "H"
                 if total_hs > 1:
                     lbl += str(total_hs)
